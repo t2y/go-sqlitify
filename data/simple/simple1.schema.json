@@ -1,0 +1,51 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "definitions": {},
+    "id": "http://example.com/simple1.json",
+    "properties": {
+        "date": {
+            "id": "/properties/date",
+            "type": "string",
+            "format": "date-time"
+        },
+        "developer": {
+            "id": "/properties/developer",
+            "properties": {
+                "age": {
+                    "id": "/properties/developer/properties/age",
+                    "type": "integer"
+                },
+                "location": {
+                    "id": "/properties/developer/properties/location",
+                    "type": "string"
+                },
+                "name": {
+                    "id": "/properties/developer/properties/name",
+                    "type": "string"
+                },
+                "repositories": {
+                    "id": "/properties/developer/properties/repositories",
+                    "items": {
+                        "id": "/properties/developer/properties/repositories/items",
+                        "type": "string"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "name": {
+            "id": "/properties/name",
+            "type": "string"
+        },
+        "oss": {
+            "id": "/properties/oss",
+            "type": "boolean"
+        },
+        "version": {
+            "id": "/properties/version",
+            "type": "number"
+        }
+    },
+    "type": "object"
+}
