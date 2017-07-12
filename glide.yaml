@@ -1,0 +1,8 @@
+package: github.com/t2y/go-sqlitify
+import:
+- package: github.com/Sirupsen/logrus
+- package: github.com/jessevdk/go-flags
+- package: github.com/pkg/errors
+- package: github.com/mattn/go-sqlite3
+- package: github.com/naoina/genmai
+- package: github.com/naoina/go-stringutil

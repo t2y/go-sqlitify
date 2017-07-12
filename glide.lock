@@ -1,0 +1,24 @@
+hash: 271b27442a589ffad7569fdb0e79c72fe4df6c3cd6604f286d84ec1d0b14ba92
+updated: 2017-07-12T15:41:18.010914819+09:00
+imports:
+- name: github.com/jessevdk/go-flags
+  version: 5695738f733662da3e9afc2283bba6f3c879002d
+- name: github.com/mattn/go-sqlite3
+  version: 47fc4e5e9153645da45af6a86a5bce95e63a0f9e
+- name: github.com/naoina/genmai
+  version: c00e6703a1503c09dca12048bf17961b13511c0f
+- name: github.com/naoina/go-stringutil
+  version: 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
+- name: github.com/pkg/errors
+  version: c605e284fe17294bda444b34710735b29d1a9d90
+- name: github.com/Sirupsen/logrus
+  version: 7f976d3a76720c4c27af2ba716b85d2e0a7e38b1
+- name: golang.org/x/net
+  version: f01ecb60fe3835d80d9a0b7b2bf24b228c89260e
+  subpackages:
+  - context
+- name: golang.org/x/sys
+  version: abf9c25f54453410d0c6668e519582a9e1115027
+  subpackages:
+  - unix
+testImports: []
