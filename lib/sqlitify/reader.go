@@ -12,7 +12,10 @@ import (
 )
 
 func ReadData(
-	path string, callback func([]byte) error,
+	path string,
+	callbackEach func([]byte) error,
+	interval int,
+	callbackInterval func(int) error,
 ) (err error) {
 	log.WithFields(log.Fields{
 		"path": path,
@@ -43,19 +46,22 @@ func ReadData(
 	i := 1
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
-		if err = callback(scanner.Bytes()); err != nil {
+		if err = callbackEach(scanner.Bytes()); err != nil {
 			log.WithFields(log.Fields{
 				"line": scanner.Text(),
 				"err":  err,
-			}).Error("failed to process callback function")
+			}).Error("failed to process callbackEach function")
 			break
 		}
 
-		if i%10000 == 0 {
-			log.WithFields(log.Fields{
-				"line": i,
-				"path": path,
-			}).Debug("read lines")
+		if i%interval == 0 {
+			if err = callbackInterval(i); err != nil {
+				log.WithFields(log.Fields{
+					"line number": i,
+					"err":         err,
+				}).Error("failed to process callbackInterval function")
+				break
+			}
 		}
 
 		i += 1
