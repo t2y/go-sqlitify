@@ -173,7 +173,7 @@ func main() {
 
 	dsn := filepath.Join(opts.OutputPath, opts.DBName)
 
-	db, err := sqlitify.GetDB(dsn)
+	db, err := sqlitify.NewDB(dsn)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"err": err,
