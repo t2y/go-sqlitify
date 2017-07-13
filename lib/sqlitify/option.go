@@ -3,6 +3,7 @@ package sqlitify
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -23,6 +24,16 @@ type Options struct {
 	Paths []string
 	Since *time.Time
 	Until *time.Time
+
+	mu      sync.Mutex
+	DBPaths []string
+}
+
+func (o *Options) AppendDBPath(path string) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	o.DBPaths = append(o.DBPaths, path)
 }
 
 func parseDateTimeArgument(dateStr string) (t *time.Time, err error) {

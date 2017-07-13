@@ -6,3 +6,4 @@ import:
 - package: github.com/mattn/go-sqlite3
 - package: github.com/naoina/genmai
 - package: github.com/naoina/go-stringutil
+- package: github.com/nu7hatch/gouuid
