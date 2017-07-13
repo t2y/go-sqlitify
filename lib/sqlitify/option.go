@@ -11,9 +11,10 @@ import (
 )
 
 type Options struct {
-	InputPath string `long:"inputPath" required:"true" description:"path to input data file"`
-	DBPath    string `long:"dbPath" description:"path to sqlite file"`
-	Command   string `long:"command" description:"init or ..."`
+	Concurrent uint   `long:"concurrent" default:"2" description:"number of concurrent reading data files"`
+	InputPath  string `long:"inputPath" required:"true" description:"path to input data file"`
+	DBPath     string `long:"dbPath" description:"path to sqlite file"`
+	Command    string `long:"command" description:"init or ..."`
 
 	ArgSince string `long:"since" description:"filter since date"`
 	ArgUntil string `long:"until" description:"filter until date"`
