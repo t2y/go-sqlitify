@@ -11,10 +11,13 @@ import (
 )
 
 type Options struct {
-	Concurrent uint   `long:"concurrent" default:"2" description:"number of concurrent reading data files"`
-	InputPath  string `long:"inputPath" required:"true" description:"path to input data file"`
-	DBPath     string `long:"dbPath" description:"path to sqlite file"`
-	Command    string `long:"command" description:"init or ..."`
+	Concurrent uint `long:"concurrent" default:"2" description:"number of concurrent reading data files"`
+
+	InputPath  string `long:"inputPath" required:"true" description:"path to input data files"`
+	OutputPath string `long:"outputPath" description:"path to put db files"`
+	DBName     string `long:"dbName" default:"sqlitify.db" description:"db file name to be merged multiple db files"`
+
+	Command string `long:"command" description:"init or ..."`
 
 	ArgSince string `long:"since" description:"filter since date"`
 	ArgUntil string `long:"until" description:"filter until date"`
@@ -22,19 +25,19 @@ type Options struct {
 	Verbose bool `long:"verbose" description:"use verbose mode"`
 
 	// internal use
-	Paths []string
-	Since *time.Time
-	Until *time.Time
+	InputPaths []string
+	Since      *time.Time
+	Until      *time.Time
 
-	mu      sync.Mutex
-	DBPaths []string
+	mu          sync.Mutex
+	OutputPaths []string
 }
 
-func (o *Options) AppendDBPath(path string) {
+func (o *Options) AppendOutputPath(path string) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 
-	o.DBPaths = append(o.DBPaths, path)
+	o.OutputPaths = append(o.OutputPaths, path)
 }
 
 func parseDateTimeArgument(dateStr string) (t *time.Time, err error) {
@@ -48,10 +51,6 @@ func parseDateTimeArgument(dateStr string) (t *time.Time, err error) {
 }
 
 func InitOptions(opts *Options) (err error) {
-	if opts.DBPath == "" {
-		opts.DBPath = "test-sqlite.db"
-	}
-
 	if opts.ArgSince != "" {
 		opts.Since, err = parseDateTimeArgument(opts.ArgSince)
 		if err != nil {
@@ -68,8 +67,8 @@ func InitOptions(opts *Options) (err error) {
 		}
 	}
 
-	opts.Paths, err = Walk(opts)
-	if len(opts.Paths) == 0 {
+	opts.InputPaths, err = Walk(opts)
+	if len(opts.InputPaths) == 0 {
 		err = errors.Errorf("no files in the directory: %s", opts.InputPath)
 		return
 	}
