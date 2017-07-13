@@ -40,6 +40,7 @@ func ReadData(
 		reader = r
 	}
 
+	i := 1
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		if err = callback(scanner.Bytes()); err != nil {
@@ -49,6 +50,15 @@ func ReadData(
 			}).Error("failed to process callback function")
 			break
 		}
+
+		if i%10000 == 0 {
+			log.WithFields(log.Fields{
+				"line": i,
+				"path": path,
+			}).Debug("read lines")
+		}
+
+		i += 1
 	}
 
 	if err = scanner.Err(); err != nil {
