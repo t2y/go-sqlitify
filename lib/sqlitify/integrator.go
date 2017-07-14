@@ -77,7 +77,9 @@ func (g *GroupIntegrator) mergeInGroups(
 					return
 				}
 
-				dsn := MakeDBPathFromGroup(group, g.opts.OutputPath)
+				uuid := GetUUID()
+				dsn := filepath.Join(g.opts.OutputPath, uuid+".db")
+
 				db, err := NewExtDB(dsn)
 				if err != nil {
 					log.WithFields(log.Fields{
