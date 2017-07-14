@@ -3,7 +3,6 @@ package sqlitify
 import (
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -25,18 +24,14 @@ type Options struct {
 	Verbose bool `long:"verbose" description:"use verbose mode"`
 
 	// internal use
-	InputPaths []string
-	Since      *time.Time
-	Until      *time.Time
-
-	mu          sync.Mutex
+	InputPaths  []string
 	OutputPaths []string
+
+	Since *time.Time
+	Until *time.Time
 }
 
 func (o *Options) AppendOutputPath(path string) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-
 	o.OutputPaths = append(o.OutputPaths, path)
 }
 
