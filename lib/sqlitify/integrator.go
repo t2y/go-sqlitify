@@ -54,6 +54,11 @@ func (s *SimpleIntegrator) Run(
 	return
 }
 
+type GroupInfo struct {
+	DSN   string
+	Group []string
+}
+
 type GroupIntegrator struct {
 	*defaultIntegrator
 }
@@ -63,8 +68,7 @@ func (g *GroupIntegrator) mergeInGroups(
 	paths []string,
 	numberOfGroups int,
 ) (mergedPaths []string) {
-	pathCh := make(chan []string, g.opts.Concurrent)
-	mergedPathCh := make(chan string, g.opts.Concurrent)
+	pathCh := make(chan *GroupInfo, g.opts.Concurrent)
 
 	var wg sync.WaitGroup
 	for i := 0; i < int(g.opts.Concurrent); i++ {
@@ -72,57 +76,42 @@ func (g *GroupIntegrator) mergeInGroups(
 		go func() {
 			defer wg.Done()
 			for {
-				group, ok := <-pathCh
+				info, ok := <-pathCh
 				if !ok {
 					return
 				}
 
-				uuid := GetUUID()
-				dsn := filepath.Join(g.opts.OutputPath, uuid+".db")
-
-				db, err := NewExtDB(dsn)
+				db, err := NewExtDB(info.DSN)
 				if err != nil {
 					log.WithFields(log.Fields{
 						"err": err,
 					}).Error("Failed to create table")
-					mergedPathCh <- ""
 					return
 				}
-				defer db.Close()
 
 				if err = db.CreateTablesIfNotExists(tables); err != nil {
 					log.WithFields(log.Fields{
 						"err": err,
 					}).Error("Failed to create table")
-					mergedPathCh <- ""
+					db.Close()
 					return
 				}
 
 				schemaName := "partof"
-				for _, path := range group {
+				for _, path := range info.Group {
 					if err = db.Merge(path, schemaName, tables); err != nil {
 						log.WithFields(log.Fields{
 							"err": err,
 						}).Error("Failed to merge data")
-						mergedPathCh <- ""
+						db.Close()
 						return
 					}
 				}
 
-				mergedPathCh <- dsn
+				db.Close()
 			}
 		}()
 	}
-
-	var extraGroup []string
-	for _, group := range GroupArray(numberOfGroups, paths) {
-		if len(group) == numberOfGroups {
-			pathCh <- group
-		} else {
-			extraGroup = group
-		}
-	}
-	close(pathCh)
 
 	numberOfGroupPaths := len(paths) / numberOfGroups
 
@@ -133,24 +122,24 @@ func (g *GroupIntegrator) mergeInGroups(
 		maxMergedPathNum = numberOfGroupPaths + 1
 	}
 
-	mergedNum := 0
-	mergedPaths = make([]string, 0, maxMergedPathNum+len(extraGroup))
-	for v := range mergedPathCh {
-		mergedNum += 1
-		if v != "" {
-			mergedPaths = append(mergedPaths, v)
-		}
-		if mergedNum > numberOfGroupPaths-1 {
-			break
-		}
-	}
-	close(mergedPathCh)
+	mergedPaths = make([]string, 0, maxMergedPathNum+(numberOfGroups-1))
 
-	if len(extraGroup) > 0 {
-		for _, group := range extraGroup {
-			mergedPaths = append(mergedPaths, group)
+	for _, group := range GroupArray(numberOfGroups, paths) {
+		if len(group) == numberOfGroups {
+			dsn := filepath.Join(g.opts.OutputPath, GetUUID()+".db")
+			mergedPaths = append(mergedPaths, dsn)
+			info := &GroupInfo{
+				DSN:   dsn,
+				Group: group,
+			}
+			pathCh <- info
+		} else {
+			for _, extra := range group {
+				mergedPaths = append(mergedPaths, extra)
+			}
 		}
 	}
+	close(pathCh)
 
 	wg.Wait()
 	return
