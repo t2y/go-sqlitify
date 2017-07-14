@@ -101,6 +101,12 @@ func (g *GroupIntegrator) mergeInGroups(
 						db.Close()
 						return
 					}
+
+					if err = os.Remove(path); err != nil {
+						log.WithFields(log.Fields{
+							"err": err,
+						}).Warn("Failed to remove")
+					}
 				}
 
 				db.Close()
