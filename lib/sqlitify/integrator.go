@@ -54,11 +54,6 @@ func (s *SimpleIntegrator) Run(
 	return
 }
 
-type GroupInfo struct {
-	DSN   string
-	Group []string
-}
-
 type GroupIntegrator struct {
 	*defaultIntegrator
 }
@@ -68,7 +63,7 @@ func (g *GroupIntegrator) mergeInGroups(
 	paths []string,
 	numberOfGroups int,
 ) (mergedPaths []string) {
-	pathCh := make(chan *GroupInfo, g.opts.Concurrent)
+	pathCh := make(chan []string, g.opts.Concurrent)
 
 	var wg sync.WaitGroup
 	for i := 0; i < int(g.opts.Concurrent); i++ {
@@ -76,12 +71,12 @@ func (g *GroupIntegrator) mergeInGroups(
 		go func() {
 			defer wg.Done()
 			for {
-				info, ok := <-pathCh
+				group, ok := <-pathCh
 				if !ok {
 					return
 				}
 
-				db, err := NewExtDB(info.DSN)
+				db, err := NewExtDB(group[0])
 				if err != nil {
 					log.WithFields(log.Fields{
 						"err": err,
@@ -98,7 +93,7 @@ func (g *GroupIntegrator) mergeInGroups(
 				}
 
 				schemaName := "partof"
-				for _, path := range info.Group {
+				for _, path := range group[1:] {
 					if err = db.Merge(path, schemaName, tables); err != nil {
 						log.WithFields(log.Fields{
 							"err": err,
@@ -126,13 +121,8 @@ func (g *GroupIntegrator) mergeInGroups(
 
 	for _, group := range GroupArray(numberOfGroups, paths) {
 		if len(group) == numberOfGroups {
-			dsn := filepath.Join(g.opts.OutputPath, GetUUID()+".db")
-			mergedPaths = append(mergedPaths, dsn)
-			info := &GroupInfo{
-				DSN:   dsn,
-				Group: group,
-			}
-			pathCh <- info
+			mergedPaths = append(mergedPaths, group[0])
+			pathCh <- group
 		} else {
 			for _, extra := range group {
 				mergedPaths = append(mergedPaths, extra)
