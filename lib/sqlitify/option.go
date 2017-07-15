@@ -16,12 +16,14 @@ type Options struct {
 	OutputPath string `long:"outputPath" description:"path to put db files"`
 	DBName     string `long:"dbName" default:"sqlitify.db" description:"db file name to be merged multiple db files"`
 
-	Command string `long:"command" description:"init or ..."`
-
 	ArgSince string `long:"since" description:"filter since date"`
 	ArgUntil string `long:"until" description:"filter until date"`
 
 	Verbose bool `long:"verbose" description:"use verbose mode"`
+
+	// debug use
+	WithoutIntegrate bool `long:"withoutIntegrate" description:"not integrate db files into 1 db"`
+	WithoutRemoveDB  bool `long:"withoutRemoveDB"  description:"not remove db files after they're merged into another"`
 
 	// internal use
 	InputPaths  []string

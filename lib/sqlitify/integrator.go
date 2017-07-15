@@ -68,7 +68,7 @@ func (g *GroupIntegrator) mergeInGroups(
 	var wg sync.WaitGroup
 	for i := 0; i < int(g.opts.Concurrent); i++ {
 		wg.Add(1)
-		go func() {
+		go func(withoutRemove bool) {
 			defer wg.Done()
 			for {
 				group, ok := <-pathCh
@@ -102,16 +102,18 @@ func (g *GroupIntegrator) mergeInGroups(
 						return
 					}
 
-					if err = os.Remove(path); err != nil {
-						log.WithFields(log.Fields{
-							"err": err,
-						}).Warn("Failed to remove")
+					if !withoutRemove {
+						if err = os.Remove(path); err != nil {
+							log.WithFields(log.Fields{
+								"err": err,
+							}).Warn("Failed to remove")
+						}
 					}
 				}
 
 				db.Close()
 			}
-		}()
+		}(g.opts.WithoutRemoveDB)
 	}
 
 	numberOfGroupPaths := len(paths) / numberOfGroups
