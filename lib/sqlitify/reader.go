@@ -89,6 +89,15 @@ func (r *JsonReader) Read(path string, db *ExtDB, bulkData *BulkData) (err error
 
 	i := 1
 	scanner := bufio.NewScanner(reader)
+
+	if r.opts.LineBufferSize != 0 && r.opts.LineBufferSize > bufio.MaxScanTokenSize {
+		buf := make([]byte, bufio.MaxScanTokenSize, r.opts.LineBufferSize)
+		scanner.Buffer(buf, r.opts.LineBufferSize)
+		log.WithFields(log.Fields{
+			"LineBufferSize": r.opts.LineBufferSize,
+		}).Info("set line buffer")
+	}
+
 	for scanner.Scan() {
 		if r.eachCallback != nil {
 			if err = r.eachCallback(db, bulkData, scanner.Bytes()); err != nil {

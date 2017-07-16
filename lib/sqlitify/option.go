@@ -13,6 +13,7 @@ import (
 type Options struct {
 	Concurrent uint `long:"concurrent" default:"2" description:"number of concurrent reading data files"`
 
+	LineBufferSize  int    `long:"lineBufferSize" default:"0" description:"buffer size to read 1 line"`
 	NumOfBulkInsert int    `long:"numOfBulkInsert" default:"300" description:"number of rows to do bulk insert"`
 	NumOfDBFiles    int    `long:"numOfDBFiles" default:"31" description:"number of db files to get from reader"`
 	InputPath       string `long:"inputPath" required:"true" description:"path to input data files"`
