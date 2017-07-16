@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
@@ -19,6 +20,10 @@ const (
 	intervalReadLineMessage = 100000
 )
 
+const (
+	TypeJsonReader = "json"
+)
+
 var (
 	ErrNoDataFile = errors.New("no data file to get")
 )
@@ -29,7 +34,8 @@ type Reader interface {
 
 	Read(string, *ExtDB, *BulkData) error
 	Run() error
-	GetDataFile() string
+	GetDBFile() (string, error)
+	GetDBFiles() ([]string, error)
 
 	IsFinished() bool
 }
@@ -208,34 +214,55 @@ func (r *JsonReader) Run() (err error) {
 	return
 }
 
-func (r *JsonReader) GetDataFiles() (paths []string, err error) {
-	if r.getDataFinished {
-		err = ErrNoDataFile
-		return
-	}
-
-	paths = make([]string, 0, maxNumberOfDataFiles)
+// ensure to returns path or error
+func (r *JsonReader) GetDBFile() (path string, err error) {
+	var ok bool
 	for {
 		select {
-		case path, ok := <-r.readCh:
+		case path, ok = <-r.readCh:
 			if !ok {
 				r.mu.Lock()
 				r.getDataFinished = true
 				r.mu.Unlock()
-				return
+				err = ErrNoDataFile
+				log.Info("finished to get data file from channel")
 			}
 
-			paths = append(paths, path)
-			if len(paths) == maxNumberOfDataFiles {
-				return
-			}
+			return
 		default:
 			if r.readFinished {
 				if len(r.readCh) == 0 {
 					close(r.readCh)
 				}
-				continue
 			}
+
+			time.Sleep(1 * time.Second)
+		}
+	}
+}
+
+func (r *JsonReader) GetDBFiles() (paths []string, err error) {
+	if r.getDataFinished {
+		err = ErrNoDataFile
+		return
+	}
+
+	paths = make([]string, 0, r.opts.NumOfDBFiles)
+	for {
+		path, e := r.GetDBFile()
+		if e != nil {
+			log.WithFields(log.Fields{
+				"e": e,
+			}).Debug("closed read channel")
+			if len(paths) == 0 {
+				err = e
+			}
+			return
+		}
+
+		paths = append(paths, path)
+		if len(paths) == r.opts.NumOfDBFiles {
+			return
 		}
 	}
 }
@@ -247,7 +274,15 @@ func (r *JsonReader) IsFinished() bool {
 func NewJsonReader(opts *Options) (r *JsonReader) {
 	r = &JsonReader{
 		opts:   opts,
-		readCh: make(chan string, maxReadChannelSize),
+		readCh: make(chan string, opts.NumOfDBFiles),
+	}
+	return
+}
+
+func NewReader(opts *Options, typ string) (r Reader) {
+	switch typ {
+	case TypeJsonReader:
+		r = NewJsonReader(opts)
 	}
 	return
 }

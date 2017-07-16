@@ -13,11 +13,11 @@ import (
 type Options struct {
 	Concurrent uint `long:"concurrent" default:"2" description:"number of concurrent reading data files"`
 
-	NumOfBulkInsert int `long:"bulkInsert" default:"300" description:"number of rows to do bulk insert"`
-
-	InputPath  string `long:"inputPath" required:"true" description:"path to input data files"`
-	OutputPath string `long:"outputPath" description:"path to put db files"`
-	DBName     string `long:"dbName" default:"sqlitify.db" description:"db file name to be merged multiple db files"`
+	NumOfBulkInsert int    `long:"numOfBulkInsert" default:"300" description:"number of rows to do bulk insert"`
+	NumOfDBFiles    int    `long:"numOfDBFiles" default:"31" description:"number of db files to get from reader"`
+	InputPath       string `long:"inputPath" required:"true" description:"path to input data files"`
+	OutputPath      string `long:"outputPath" description:"path to put db files"`
+	DBName          string `long:"dbName" default:"sqlitify.db" description:"db file name to be merged multiple db files"`
 
 	ArgSince string `long:"since" description:"filter since date"`
 	ArgUntil string `long:"until" description:"filter until date"`

@@ -196,13 +196,13 @@ func GroupSlices(n int, inputs []string) (outputs [][]string) {
 }
 
 func NewDataIntegrator(
-	opts *Options, name string,
+	opts *Options, typ string,
 ) (di DataIntegrator) {
 	d := &defaultIntegrator{
 		opts: opts,
 	}
 
-	switch name {
+	switch typ {
 	case TypeSimpleIntegrator:
 		di = &SimpleIntegrator{d}
 	case TypeGroupIntegrator:

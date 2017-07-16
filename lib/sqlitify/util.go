@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 
 	uuid "github.com/nu7hatch/gouuid"
@@ -62,4 +63,16 @@ func GetTypeName(t interface{}) (name string) {
 	}
 
 	return
+}
+
+func GetFunctionName(i interface{}) string {
+	fqn := runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+	names := strings.Split(fqn, ".")
+	return names[len(names)-1]
+}
+
+func GetMethodName(i interface{}) string {
+	fqn := runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+	names := strings.Split(fqn, ".")
+	return strings.Join(names[len(names)-2:], ".")
 }
