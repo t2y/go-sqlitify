@@ -15,6 +15,8 @@ import (
 const (
 	maxNumberOfDataFiles = 31
 	maxReadChannelSize   = 1024
+
+	intervalReadLineMessage = 100000
 )
 
 var (
@@ -104,7 +106,7 @@ func (r *JsonReader) Read(path string, db *ExtDB, bulkData *BulkData) (err error
 			}
 		}
 
-		if i%10000 == 0 {
+		if i%intervalReadLineMessage == 0 {
 			log.WithFields(log.Fields{
 				"line": i,
 				"path": path,
