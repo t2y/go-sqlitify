@@ -6,11 +6,14 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/naoina/genmai"
 	"github.com/pkg/errors"
 )
 
 type Options struct {
 	Concurrent uint `long:"concurrent" default:"2" description:"number of concurrent reading data files"`
+
+	NumOfBulkInsert int `long:"bulkInsert" default:"300" description:"number of rows to do bulk insert"`
 
 	InputPath  string `long:"inputPath" required:"true" description:"path to input data files"`
 	OutputPath string `long:"outputPath" description:"path to put db files"`
@@ -28,6 +31,8 @@ type Options struct {
 	// internal use
 	InputPaths  []string
 	OutputPaths []string
+
+	Tables []genmai.TableNamer
 
 	Since *time.Time
 	Until *time.Time

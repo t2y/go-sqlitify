@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -171,22 +170,22 @@ func main() {
 		}).Fatal("Failed to initialize options")
 	}
 
-	dsn := filepath.Join(opts.OutputPath, opts.DBName)
-
-	db, err := sqlitify.NewDB(dsn)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Fatal("Failed to get database")
-	}
-
-	if err = createTableIfNotExists(db); err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Fatal("Failed to create table")
-	}
-
 	/*
+		dsn := filepath.Join(opts.OutputPath, opts.DBName)
+
+		db, err := sqlitify.NewExtDB(dsn)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err": err,
+			}).Fatal("Failed to get database")
+		}
+
+		if err = createTableIfNotExists(db); err != nil {
+			log.WithFields(log.Fields{
+				"err": err,
+			}).Fatal("Failed to create table")
+		}
+
 		for _, path := range opts.Paths {
 			sqlitify.ReadData(path, insertData(db))
 		}

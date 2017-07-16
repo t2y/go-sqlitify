@@ -2,7 +2,6 @@ package sqlitify
 
 import (
 	"os"
-	"path/filepath"
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
@@ -11,12 +10,33 @@ import (
 )
 
 type DataIntegrator interface {
-	Run([]genmai.TableNamer) error
+	Run([]string, []genmai.TableNamer) (string, error)
 }
 
 type defaultIntegrator struct {
 	opts *Options
-	db   *ExtDB
+}
+
+func (d *defaultIntegrator) mergeThenRemove(
+	paths []string, db *ExtDB, tables []genmai.TableNamer,
+) (err error) {
+	schemaName := "partof"
+	for _, path := range paths {
+		if err = db.Merge(path, schemaName, tables); err != nil {
+			err = errors.Wrap(err, "faild to merge data")
+			return
+		}
+
+		if !d.opts.WithoutRemoveDB {
+			if e := os.Remove(path); e != nil {
+				log.WithFields(log.Fields{
+					"err": e,
+				}).Warn("Failed to remove")
+			}
+		}
+	}
+
+	return
 }
 
 const (
@@ -29,33 +49,47 @@ type SimpleIntegrator struct {
 }
 
 func (s *SimpleIntegrator) Run(
-	tables []genmai.TableNamer,
-) (err error) {
+	paths []string, tables []genmai.TableNamer,
+) (resultPath string, err error) {
 	typeName := GetTypeName(s)
 	log.WithFields(log.Fields{
 		"integrator": typeName,
 	}).Debug("start integrating data")
 
-	schemaName := "partof"
-	for _, path := range s.opts.OutputPaths {
-		log.WithFields(log.Fields{
-			"integrator": typeName,
-			"path":       path,
-		}).Info("merge target")
-		if err = s.db.Merge(path, schemaName, tables); err != nil {
-			err = errors.Wrap(err, "faild to merge data")
-			return
-		}
+	var db *ExtDB
+	resultPath = paths[0]
+	if db, err = NewExtDBWithTables(resultPath, tables); err != nil {
+		err = errors.Wrap(err, "faild to get db")
+		return
+	}
+	defer db.Close()
+
+	if err = s.mergeThenRemove(paths[1:], db, tables); err != nil {
+		err = errors.Wrap(err, "faild to merge and remove")
+		return
 	}
 
 	log.WithFields(log.Fields{
 		"integrator": typeName,
+		"resultPath": resultPath,
 	}).Debug("end integrating data")
 	return
 }
 
 type GroupIntegrator struct {
 	*defaultIntegrator
+}
+
+func (g *GroupIntegrator) getMergedPathSize(
+	pathsLength, numberOfGroups int,
+) (size int) {
+	numberOfGroupPaths := pathsLength / numberOfGroups
+	if pathsLength%numberOfGroups != 0 {
+		numberOfGroupPaths += 1
+	}
+
+	size = numberOfGroupPaths + (numberOfGroups - 1)
+	return
 }
 
 func (g *GroupIntegrator) mergeInGroups(
@@ -68,7 +102,7 @@ func (g *GroupIntegrator) mergeInGroups(
 	var wg sync.WaitGroup
 	for i := 0; i < int(g.opts.Concurrent); i++ {
 		wg.Add(1)
-		go func(withoutRemove bool) {
+		go func() {
 			defer wg.Done()
 			for {
 				group, ok := <-pathCh
@@ -76,58 +110,30 @@ func (g *GroupIntegrator) mergeInGroups(
 					return
 				}
 
-				db, err := NewExtDB(group[0])
+				db, err := NewExtDBWithTables(group[0], tables)
 				if err != nil {
 					log.WithFields(log.Fields{
 						"err": err,
-					}).Error("Failed to create table")
-					return
+					}).Error("failed to get db")
+					continue
 				}
 
-				if err = db.CreateTablesIfNotExists(tables); err != nil {
+				if err := g.mergeThenRemove(group[1:], db, tables); err != nil {
 					log.WithFields(log.Fields{
 						"err": err,
-					}).Error("Failed to create table")
+					}).Error("failed to merge and remove")
 					db.Close()
-					return
-				}
-
-				schemaName := "partof"
-				for _, path := range group[1:] {
-					if err = db.Merge(path, schemaName, tables); err != nil {
-						log.WithFields(log.Fields{
-							"err": err,
-						}).Error("Failed to merge data")
-						db.Close()
-						return
-					}
-
-					if !withoutRemove {
-						if err = os.Remove(path); err != nil {
-							log.WithFields(log.Fields{
-								"err": err,
-							}).Warn("Failed to remove")
-						}
-					}
+					continue
 				}
 
 				db.Close()
 			}
-		}(g.opts.WithoutRemoveDB)
+		}()
 	}
 
-	numberOfGroupPaths := len(paths) / numberOfGroups
-
-	var maxMergedPathNum int
-	if len(paths)%numberOfGroups == 0 {
-		maxMergedPathNum = numberOfGroupPaths
-	} else {
-		maxMergedPathNum = numberOfGroupPaths + 1
-	}
-
-	mergedPaths = make([]string, 0, maxMergedPathNum+(numberOfGroups-1))
-
-	for _, group := range GroupArray(numberOfGroups, paths) {
+	mergedPathSize := g.getMergedPathSize(len(paths), numberOfGroups)
+	mergedPaths = make([]string, 0, mergedPathSize)
+	for _, group := range GroupSlices(numberOfGroups, paths) {
 		if len(group) == numberOfGroups {
 			mergedPaths = append(mergedPaths, group[0])
 			pathCh <- group
@@ -144,14 +150,13 @@ func (g *GroupIntegrator) mergeInGroups(
 }
 
 func (g *GroupIntegrator) Run(
-	tables []genmai.TableNamer,
-) (err error) {
+	paths []string, tables []genmai.TableNamer,
+) (resultPath string, err error) {
 	typeName := GetTypeName(g)
 	log.WithFields(log.Fields{
 		"integrator": typeName,
 	}).Debug("start integrating data")
 
-	paths := g.opts.OutputPaths
 	for {
 		log.WithFields(log.Fields{
 			"number of db files": len(paths),
@@ -159,23 +164,19 @@ func (g *GroupIntegrator) Run(
 
 		paths = g.mergeInGroups(tables, paths, 2)
 		if len(paths) == 1 {
+			resultPath = paths[0]
 			break
 		}
 	}
 
-	resultPath := filepath.Join(g.opts.OutputPath, g.opts.DBName)
-	if err = os.Rename(paths[0], resultPath); err != nil {
-		err = errors.Wrap(err, "failed to rename a file")
-		return
-	}
-
 	log.WithFields(log.Fields{
 		"integrator": typeName,
+		"resultPath": resultPath,
 	}).Debug("end integrating data")
 	return
 }
 
-func GroupArray(n int, inputs []string) (outputs [][]string) {
+func GroupSlices(n int, inputs []string) (outputs [][]string) {
 	group := make([]string, 0, n)
 	for i, v := range inputs {
 		if i%n == 0 {
@@ -195,11 +196,10 @@ func GroupArray(n int, inputs []string) (outputs [][]string) {
 }
 
 func NewDataIntegrator(
-	opts *Options, db *ExtDB, name string,
+	opts *Options, name string,
 ) (di DataIntegrator) {
 	d := &defaultIntegrator{
 		opts: opts,
-		db:   db,
 	}
 
 	switch name {
