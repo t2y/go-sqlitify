@@ -93,9 +93,6 @@ func (r *JsonReader) Read(path string, db *ExtDB, bulkData *BulkData) (err error
 	if r.opts.LineBufferSize != 0 && r.opts.LineBufferSize > bufio.MaxScanTokenSize {
 		buf := make([]byte, bufio.MaxScanTokenSize, r.opts.LineBufferSize)
 		scanner.Buffer(buf, r.opts.LineBufferSize)
-		log.WithFields(log.Fields{
-			"LineBufferSize": r.opts.LineBufferSize,
-		}).Info("set line buffer")
 	}
 
 	for scanner.Scan() {
@@ -103,6 +100,7 @@ func (r *JsonReader) Read(path string, db *ExtDB, bulkData *BulkData) (err error
 			if err = r.eachCallback(db, bulkData, scanner.Bytes()); err != nil {
 				log.WithFields(log.Fields{
 					"line": scanner.Text(),
+					"path": path,
 					"err":  err,
 				}).Error("failed to process eachCallback function")
 				break
@@ -114,6 +112,7 @@ func (r *JsonReader) Read(path string, db *ExtDB, bulkData *BulkData) (err error
 				if err = r.intervalCallback(db, bulkData, i); err != nil {
 					log.WithFields(log.Fields{
 						"line number": i,
+						"path":        path,
 						"err":         err,
 					}).Error("failed to process intervalCallback function")
 					break
