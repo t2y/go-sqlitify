@@ -14,9 +14,17 @@ deps:
 	glide cache-clear
 	glide update
 
+.PHONY: build-generator
+build-generator:
+	@mkdir -p bin
+	go build -o ./bin/type_generator cli/type_generator/main.go
+	go build -o ./bin/code_generator cli/code_generator/main.go
+
 .PHONY: build
 build:
 	@mkdir -p bin
+	./bin/type_generator --inputPath .
+	go generate
 	go build -o ./bin/sqlitify *.go
 
 .PHONY: example 
@@ -26,7 +34,7 @@ example:
 
 .PHONY: clean
 clean:
-	rm -f .bin/sqlitify
+	rm -f .bin/*
 
 .PHONY: test
 test:
