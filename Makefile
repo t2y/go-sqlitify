@@ -17,7 +17,7 @@ deps:
 .PHONY: build
 build:
 	@mkdir -p bin
-	go build -o ./bin/sqlitify sqlitify.go
+	go build -o ./bin/sqlitify *.go
 
 .PHONY: example 
 example:
